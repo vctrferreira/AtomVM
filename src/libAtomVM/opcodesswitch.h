@@ -67,8 +67,8 @@ typedef union
 #define RAISE_ERROR(error_type_atom)                                    \
     int target_label = get_catch_label_and_change_module(ctx, &mod);    \
     if (target_label) {                                                 \
-        ctx->x[0] = ERROR_ATOM;                                         \
-        ctx->x[1] = error_type_atom;                                    \
+        x_regs[0] = ERROR_ATOM;                                         \
+        x_regs[1] = error_type_atom;                                    \
         JUMP_TO_ADDRESS(mod->labels[target_label]);                     \
         continue;                                                       \
     } else {                                                            \
@@ -165,7 +165,7 @@ typedef union
 #ifdef IMPL_EXECUTE_LOOP
 
 #define T_DEST_REG(dreg_type, dreg) \
-    (*dreg_type.ptr == ctx->x) ? 'x' : 'y', (dreg)
+    (*dreg_type.ptr == x_regs) ? 'x' : 'y', (dreg)
 
 #define DECODE_COMPACT_TERM(dest_term, code_chunk, base_index, off, next_operand_offset)                                \
 {                                                                                                                       \
@@ -186,7 +186,7 @@ typedef union
             break;                                                                                                      \
                                                                                                                         \
         case COMPACT_XREG:                                                                                              \
-            dest_term = ctx->x[first_byte >> 4];                                                                        \
+            dest_term = x_regs[first_byte >> 4];                                                                        \
             next_operand_offset += 1;                                                                                   \
             break;                                                                                                      \
                                                                                                                         \
@@ -686,8 +686,8 @@ term make_fun(Context *ctx, const Module *mod, int fun_index)
                     int target_label = get_catch_label_and_change_module(ctx, &mod);
 
                     if (target_label) {
-                        ctx->x[0] = ERROR_ATOM;
-                        ctx->x[1] = FUNCTION_CLAUSE_ATOM;
+                        x_regs[0] = ERROR_ATOM;
+                        x_regs[1] = FUNCTION_CLAUSE_ATOM;
                         JUMP_TO_ADDRESS(mod->labels[target_label]);
                     } else {
                         fprintf(stderr, "FUNC_INFO: No function clause for module %i atom %i arity %i.\n", module_atom, function_name_atom, arity);
@@ -868,11 +868,11 @@ term make_fun(Context *ctx, const Module *mod, int fun_index)
                     switch (func->type) {
                         case NIFFunctionType: {
                             const struct Nif *nif = EXPORTED_FUNCTION_TO_NIF(func);
-                            term return_value = nif->nif_ptr(ctx, arity, ctx->x);
+                            term return_value = nif->nif_ptr(ctx, arity, x_regs);
                             if (UNLIKELY(term_is_invalid_term(return_value))) {
                                 RAISE_EXCEPTION();
                             }
-                            ctx->x[0] = return_value;
+                            x_regs[0] = return_value;
                             break;
                         }
                         case ModuleFunction: {
@@ -930,11 +930,11 @@ term make_fun(Context *ctx, const Module *mod, int fun_index)
                     switch (func->type) {
                         case NIFFunctionType: {
                             const struct Nif *nif = EXPORTED_FUNCTION_TO_NIF(func);
-                            term return_value = nif->nif_ptr(ctx, arity, ctx->x);
+                            term return_value = nif->nif_ptr(ctx, arity, x_regs);
                             if (UNLIKELY(term_is_invalid_term(return_value))) {
                                 RAISE_EXCEPTION();
                             }
-                            ctx->x[0] = return_value;
+                            x_regs[0] = return_value;
 
                             DO_RETURN();
 
@@ -1291,15 +1291,15 @@ term make_fun(Context *ctx, const Module *mod, int fun_index)
                 #endif
 
                 #ifdef IMPL_EXECUTE_LOOP
-                    int local_process_id = term_to_local_process_id(ctx->x[0]);
+                    int local_process_id = term_to_local_process_id(x_regs[0]);
                     TRACE("send/0 target_pid=%i\n", local_process_id);
-                    TRACE_SEND(ctx, ctx->x[0], ctx->x[1]);
+                    TRACE_SEND(ctx, x_regs[0], x_regs[1]);
                     Context *target = globalcontext_get_process(ctx->global, local_process_id);
                     if (!IS_NULL_PTR(target)) {
-                        mailbox_send(target, ctx->x[1]);
+                        mailbox_send(target, x_regs[1]);
                     }
 
-                    ctx->x[0] = ctx->x[1];
+                    x_regs[0] = x_regs[1];
                 #endif
 
                 NEXT_INSTRUCTION(1);
@@ -2365,16 +2365,16 @@ term make_fun(Context *ctx, const Module *mod, int fun_index)
                 USED_BY_TRACE(args_count);
 
                 #ifdef IMPL_EXECUTE_LOOP
-                    term fun = ctx->x[args_count];
+                    term fun = x_regs[args_count];
 
                     if (UNLIKELY(!term_is_function(fun))) {
                         int target_label = get_catch_label_and_change_module(ctx, &mod);
                         if (target_label) {
-                            ctx->x[0] = ERROR_ATOM;
+                            x_regs[0] = ERROR_ATOM;
                             term new_error_tuple = term_alloc_tuple(2, ctx);
                             term_put_tuple_element(new_error_tuple, 0, BADFUN_ATOM);
-                            term_put_tuple_element(new_error_tuple, 1, ctx->x[args_count]);
-                            ctx->x[1] = new_error_tuple;
+                            term_put_tuple_element(new_error_tuple, 1, x_regs[args_count]);
+                            x_regs[1] = new_error_tuple;
                             JUMP_TO_ADDRESS(mod->labels[target_label]);
                             continue;
 
@@ -2398,8 +2398,8 @@ term make_fun(Context *ctx, const Module *mod, int fun_index)
                     if (UNLIKELY(args_count != arity - n_freeze)) {
                         int target_label = get_catch_label_and_change_module(ctx, &mod);
                         if (target_label) {
-                            ctx->x[0] = ERROR_ATOM;
-                            ctx->x[1] = BADARITY_ATOM;
+                            x_regs[0] = ERROR_ATOM;
+                            x_regs[1] = BADARITY_ATOM;
                             JUMP_TO_ADDRESS(mod->labels[target_label]);
                             continue;
 
@@ -2409,7 +2409,7 @@ term make_fun(Context *ctx, const Module *mod, int fun_index)
                     }
 
                     for (unsigned int j = arity - n_freeze; j < arity + n_freeze; j++) {
-                        ctx->x[j] = boxed_value[j - (arity - n_freeze) + 3];
+                        x_regs[j] = boxed_value[j - (arity - n_freeze) + 3];
                     }
 
                     NEXT_INSTRUCTION(next_off);
@@ -2494,11 +2494,11 @@ term make_fun(Context *ctx, const Module *mod, int fun_index)
                     switch (func->type) {
                         case NIFFunctionType: {
                             const struct Nif *nif = EXPORTED_FUNCTION_TO_NIF(func);
-                            term return_value = nif->nif_ptr(ctx, arity, ctx->x);
+                            term return_value = nif->nif_ptr(ctx, arity, x_regs);
                             if (UNLIKELY(term_is_invalid_term(return_value))) {
                                 RAISE_EXCEPTION();
                             }
-                            ctx->x[0] = return_value;
+                            x_regs[0] = return_value;
                             if ((long) ctx->cp == -1) {
                                 return 0;
                             }
@@ -2537,7 +2537,7 @@ term make_fun(Context *ctx, const Module *mod, int fun_index)
                     if (term_is_invalid_term(f)) {
                         RAISE_ERROR(OUT_OF_MEMORY_ATOM);
                     } else {
-                        ctx->x[0] = f;
+                        x_regs[0] = f;
                     }
                 #endif
 
@@ -2621,8 +2621,8 @@ term make_fun(Context *ctx, const Module *mod, int fun_index)
                         term new_error_tuple = term_alloc_tuple(2, ctx);
                         term_put_tuple_element(new_error_tuple, 0, TRY_CLAUSE_ATOM);
                         term_put_tuple_element(new_error_tuple, 1, arg1);
-                        ctx->x[0] = ERROR_ATOM;
-                        ctx->x[1] = new_error_tuple;
+                        x_regs[0] = ERROR_ATOM;
+                        x_regs[1] = new_error_tuple;
                         JUMP_TO_ADDRESS(mod->labels[target_label]);
                     } else {
                         abort();
@@ -2638,8 +2638,8 @@ term make_fun(Context *ctx, const Module *mod, int fun_index)
                 int arity;
                 DECODE_INTEGER(arity, code, i, next_off, next_off)
 #ifdef IMPL_EXECUTE_LOOP
-                term module = ctx->x[arity];
-                term function = ctx->x[arity+1];
+                term module = x_regs[arity];
+                term function = x_regs[arity+1];
                 TRACE("apply/1, module=%lu, function=%lu arity=%i\n", module, function, arity);
 
                 remaining_reductions--;
@@ -2656,11 +2656,11 @@ term make_fun(Context *ctx, const Module *mod, int fun_index)
 
                 struct Nif *nif = (struct Nif *) nifs_get(module_name, function_name, arity);
                 if (!IS_NULL_PTR(nif)) {
-                    term return_value = nif->nif_ptr(ctx, arity, ctx->x);
+                    term return_value = nif->nif_ptr(ctx, arity, x_regs);
                     if (UNLIKELY(term_is_invalid_term(return_value))) {
                         RAISE_EXCEPTION();
                     }
-                    ctx->x[0] = return_value;
+                    x_regs[0] = return_value;
                 } else {
                     Module *target_module = globalcontext_get_module(ctx->global, module_name);
                     if (IS_NULL_PTR(target_module)) {
@@ -2690,8 +2690,8 @@ term make_fun(Context *ctx, const Module *mod, int fun_index)
                 int n_words;
                 DECODE_INTEGER(n_words, code, i, next_off, next_off);
 #ifdef IMPL_EXECUTE_LOOP
-                term module = ctx->x[arity];
-                term function = ctx->x[arity+1];
+                term module = x_regs[arity];
+                term function = x_regs[arity+1];
                 TRACE("apply_last/1, module=%lu, function=%lu arity=%i deallocate=%i\n", module, function, arity, n_words);
 
                 remaining_reductions--;
@@ -2710,11 +2710,11 @@ term make_fun(Context *ctx, const Module *mod, int fun_index)
 
                 struct Nif *nif = (struct Nif *) nifs_get(module_name, function_name, arity);
                 if (!IS_NULL_PTR(nif)) {
-                    term return_value = nif->nif_ptr(ctx, arity, ctx->x);
+                    term return_value = nif->nif_ptr(ctx, arity, x_regs);
                     if (UNLIKELY(term_is_invalid_term(return_value))) {
                         RAISE_EXCEPTION();
                     }
-                    ctx->x[0] = return_value;
+                    x_regs[0] = return_value;
                     DO_RETURN();
                 } else {
                     Module *target_module = globalcontext_get_module(ctx->global, module_name);
