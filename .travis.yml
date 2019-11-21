@@ -397,6 +397,23 @@ matrix:
       before_install:
         - eval "${MATRIX_EVAL}"
 
+    - name: "windows"
+      os: windows
+      script:
+#        - export PATH="/usr/local/opt/erlang@21/bin:$PATH"
+#        - erl -eval 'erlang:display(erlang:system_info(otp_release)), halt().' -noshell
+        - export CFLAGS="-O2"
+        - export CXXFLAGS="-O2"
+        - mkdir -p build
+        - cd build
+        - cmake ..
+        - make
+        - ./tests/test-erlang
+        - ./src/AtomVM ./tests/libs/estdlib/test_estdlib.avm
+        - ./src/AtomVM ./tests/libs/eavmlib/test_eavmlib.avm
+      before_install:
+        - choco install gperf --version 3.1
+
     - name: "ESP32 platform"
       services:
         - docker
