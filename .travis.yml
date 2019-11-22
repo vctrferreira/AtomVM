@@ -406,7 +406,7 @@ matrix:
         - export CXXFLAGS="-O2"
         - mkdir -p build
         - cd build
-        - cmake ..
+        - cmake -G "Unix Makefiles" ..
         - make
         - ./tests/test-erlang
         - ./src/AtomVM ./tests/libs/estdlib/test_estdlib.avm
