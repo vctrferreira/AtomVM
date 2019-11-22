@@ -413,6 +413,8 @@ matrix:
         - ./src/AtomVM ./tests/libs/eavmlib/test_eavmlib.avm
       before_install:
         - choco install gperf --version 3.1
+        - choco install make
+
 
     - name: "ESP32 platform"
       services:
