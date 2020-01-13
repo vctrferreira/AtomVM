@@ -17,14 +17,18 @@
 %   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA .        %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--module(spi).
--export([init/1, open_device/2]).
+-module(spi_device).
+-export([read_at/3, write_at/4]).
 
-init(Param) ->
-    open_port({spawn, "spi"}, Param).
+read_at(SPI, Address, Len) ->
+    SPI ! {self(), make_ref(), {read_at, Address, Len}},
+    receive
+        Ret ->
+            Ret
+    end.
 
-open_device(SPI, Opts) ->
-    SPI ! {self(), make_ref(), {open_device, Opts}},
+write_at(SPI, Address, Len, Data) ->
+    SPI ! {self(), make_ref(), {write_at, Address bor 16#80, Len, Data}},
     receive
         Ret ->
             Ret

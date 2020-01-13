@@ -17,6 +17,7 @@ set(ERLANG_MODULES
     logger
     network_fsm
     spi
+    spi_device
     timer_manager
     timestamp_util
 )

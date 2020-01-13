@@ -17,7 +17,7 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA .        *
  ***************************************************************************/
 
-#include "spidriver.h"
+#include "spi_device_driver.h"
 
 #include <string.h>
 
@@ -44,9 +44,9 @@
 #include "sys.h"
 #include "esp32_sys.h"
 
-static void spidriver_consume_mailbox(Context *ctx);
+static void spi_device_consume_mailbox(Context *ctx);
 
-static uint32_t spidriver_transfer_at(Context *ctx, uint64_t address, int data_len, uint32_t data, bool *ok);
+static uint32_t spi_device_transfer_at(Context *ctx, uint64_t address, int data_len, uint32_t data, bool *ok);
 
 struct SPIData
 {
@@ -54,31 +54,17 @@ struct SPIData
     spi_transaction_t transaction;
 };
 
-void spidriver_init(Context *ctx, term opts)
+void spi_device_init(Context *ctx, term opts)
 {
     struct SPIData *spi_data = calloc(1, sizeof(struct SPIData));
 
-    ctx->native_handler = spidriver_consume_mailbox;
+    ctx->native_handler = spi_device_consume_mailbox;
     ctx->platform_data = spi_data;
 
-    term bus_config = interop_proplist_get_value(opts, BUS_CONFIG_ATOM);
-    term miso_io_num_term = interop_proplist_get_value(bus_config, MISO_IO_NUM_ATOM);
-    term mosi_io_num_term = interop_proplist_get_value(bus_config, MOSI_IO_NUM_ATOM);
-    term sclk_io_num_term = interop_proplist_get_value(bus_config, SCLK_IO_NUM_ATOM);
-
-    spi_bus_config_t buscfg;
-    memset(&buscfg, 0, sizeof(spi_bus_config_t));
-    buscfg.miso_io_num = term_to_int32(miso_io_num_term);
-    buscfg.mosi_io_num = term_to_int32(mosi_io_num_term);
-    buscfg.sclk_io_num = term_to_int32(sclk_io_num_term);
-    buscfg.quadwp_io_num = -1;
-    buscfg.quadhd_io_num = -1;
-
-    term device_config = interop_proplist_get_value(opts, DEVICE_CONFIG_ATOM);
-    term clock_speed_hz_term = interop_proplist_get_value(device_config, SPI_CLOCK_HZ_ATOM);
-    term mode_term = interop_proplist_get_value(device_config, SPI_MODE_ATOM);
-    term spics_io_num_term = interop_proplist_get_value(device_config, SPI_CS_IO_NUM_ATOM);
-    term address_bits_term = interop_proplist_get_value(device_config, ADDRESS_LEN_BITS_ATOM);
+    term clock_speed_hz_term = interop_proplist_get_value(opts, SPI_CLOCK_HZ_ATOM);
+    term mode_term = interop_proplist_get_value(opts, SPI_MODE_ATOM);
+    term spics_io_num_term = interop_proplist_get_value(opts, SPI_CS_IO_NUM_ATOM);
+    term address_bits_term = interop_proplist_get_value(opts, ADDRESS_LEN_BITS_ATOM);
 
     spi_device_interface_config_t devcfg;
     memset(&devcfg, 0, sizeof(spi_device_interface_config_t));
@@ -88,15 +74,7 @@ void spidriver_init(Context *ctx, term opts)
     devcfg.queue_size = 4;
     devcfg.address_bits = term_to_int32(address_bits_term);
 
-    int ret = spi_bus_initialize(HSPI_HOST, &buscfg, 1);
-
-    if (ret == ESP_OK) {
-        TRACE("initialized SPI\n");
-    } else {
-        TRACE("spi_bus_initialize return code: %i\n", ret);
-    }
-
-    ret = spi_bus_add_device(HSPI_HOST, &devcfg, &spi_data->handle);
+    esp_err_t ret = spi_bus_add_device(HSPI_HOST, &devcfg, &spi_data->handle);
 
     if (ret == ESP_OK) {
         TRACE("initialized SPI device\n");
@@ -105,7 +83,7 @@ void spidriver_init(Context *ctx, term opts)
     }
 }
 
-static uint32_t spidriver_transfer_at(Context *ctx, uint64_t address, int data_len, uint32_t data, bool *ok)
+static uint32_t spi_device_transfer_at(Context *ctx, uint64_t address, int data_len, uint32_t data, bool *ok)
 {
     TRACE("--- SPI transfer ---\n");
     TRACE("spi: address: %x, tx: %x\n", (int) address, (int) data);
@@ -171,7 +149,7 @@ static inline term make_read_result_tuple(uint32_t read_value, Context *ctx)
     return result_tuple;
 }
 
-static term spidriver_read_at(Context *ctx, term req)
+static term spi_device_read_at(Context *ctx, term req)
 {
     //cmd is at index 0
     term address_term = term_get_tuple_element(req, 1);
@@ -181,7 +159,7 @@ static term spidriver_read_at(Context *ctx, term req)
     avm_int_t data_len = term_to_int(len_term);
 
     bool ok;
-    uint32_t read_value = spidriver_transfer_at(ctx, address, data_len, 0, &ok);
+    uint32_t read_value = spi_device_transfer_at(ctx, address, data_len, 0, &ok);
     if (UNLIKELY(!ok)) {
         return ERROR_ATOM;
     }
@@ -189,7 +167,7 @@ static term spidriver_read_at(Context *ctx, term req)
     return make_read_result_tuple(read_value, ctx);
 }
 
-static term spidriver_write_at(Context *ctx, term req)
+static term spi_device_write_at(Context *ctx, term req)
 {
     //cmd is at index 0
     term address_term = term_get_tuple_element(req, 1);
@@ -201,7 +179,7 @@ static term spidriver_write_at(Context *ctx, term req)
     avm_int_t data = term_maybe_unbox_int(data_term);
 
     bool ok;
-    uint32_t read_value = spidriver_transfer_at(ctx, address, data_len, data, &ok);
+    uint32_t read_value = spi_device_transfer_at(ctx, address, data_len, data, &ok);
     if (UNLIKELY(!ok)) {
         return ERROR_ATOM;
     }
@@ -209,7 +187,7 @@ static term spidriver_write_at(Context *ctx, term req)
     return make_read_result_tuple(read_value, ctx);
 }
 
-static void spidriver_consume_mailbox(Context *ctx)
+static void spi_device_consume_mailbox(Context *ctx)
 {
     Message *message = mailbox_dequeue(ctx);
     term msg = message->message;
@@ -227,12 +205,12 @@ static void spidriver_consume_mailbox(Context *ctx)
     switch (cmd) {
         case READ_AT_ATOM:
             TRACE("spi: read at.\n");
-            ret = spidriver_read_at(ctx, req);
+            ret = spi_device_read_at(ctx, req);
             break;
 
         case WRITE_AT_ATOM:
             TRACE("spi: write at.\n");
-            ret = spidriver_write_at(ctx, req);
+            ret = spi_device_write_at(ctx, req);
             break;
 
         default:

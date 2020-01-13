@@ -82,6 +82,7 @@ static const char *const spi_clock_hz_atom = "\xC" "spi_clock_hz";
 static const char *const spi_mode_atom = "\x8" "spi_mode";
 static const char *const spi_cs_io_num_atom = "\xD" "spi_cs_io_num";
 static const char *const address_len_bits_atom = "\x10" "address_len_bits";
+static const char *const open_device_atom = "\xB" "open_device";
 static const char *const read_at_atom = "\x7" "read_at";
 static const char *const write_at_atom = "\x8" "write_at";
 
@@ -162,6 +163,7 @@ void platform_defaultatoms_init(GlobalContext *glb)
     ok &= globalcontext_insert_atom(glb, spi_mode_atom) == SPI_MODE_ATOM_INDEX;
     ok &= globalcontext_insert_atom(glb, spi_cs_io_num_atom) == SPI_CS_IO_NUM_ATOM_INDEX;
     ok &= globalcontext_insert_atom(glb, address_len_bits_atom) == ADDRESS_LEN_BITS_ATOM_INDEX;
+    ok &= globalcontext_insert_atom(glb, open_device_atom) == OPEN_DEVICE_ATOM_INDEX;
     ok &= globalcontext_insert_atom(glb, read_at_atom) == READ_AT_ATOM_INDEX;
     ok &= globalcontext_insert_atom(glb, write_at_atom) == WRITE_AT_ATOM_INDEX;
 

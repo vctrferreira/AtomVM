@@ -45,19 +45,18 @@
 -define (IRQ_PAYLOAD_CRC_ERROR_MASK, 16#20).
 -define (IRQ_RX_DONE_MASK, 16#40).
 
+-define (SPIBus, [
+    {miso_io_num, 19},
+    {mosi_io_num, 27},
+    {sclk_io_num, 5}
+]).
+
 -define (SPISettings, [
-    {bus_config, [
-            {miso_io_num, 19},
-            {mosi_io_num, 27},
-            {sclk_io_num, 5}
-        ]},
-        {device_config, [
-            {spi_clock_hz, 1000000},
-            {spi_mode, 0},
-            {spi_cs_io_num, 18},
-            {address_len_bits, 8}
-        ]}
-    ]).
+    {spi_clock_hz, 1000000},
+    {spi_mode, 0},
+    {spi_cs_io_num, 18},
+    {address_len_bits, 8}
+]).
 
 start() ->
     {ok, P} = avm_gen_server:start(?MODULE, [], []),
@@ -118,7 +117,8 @@ init_hw(GPIO, SPISettings) ->
     gpio:set_level(GPIO, 14, 1),
     avm_timer:sleep(50),
 
-    SPI = spi:open(SPISettings),
+    SPIBus = spi:init(?SPIBus),
+    SPI = spi:open_device(SPIBus, ?SPISettings),
 
     % Check version
     RegVersionResult = read_register(SPI, ?REG_VERSION),
@@ -250,7 +250,7 @@ wait_flags(_SPI, _Register, _Mask, _NotZero) ->
     ok.
 
 read_register(SPI, Address) ->
-    spi:read_at(SPI, Address, 8).
+    spi_device:read_at(SPI, Address, 8).
 
 write_register(SPI, Address, Data) ->
-    spi:write_at(SPI, Address, 8, Data).
+    spi_device:write_at(SPI, Address, 8, Data).
