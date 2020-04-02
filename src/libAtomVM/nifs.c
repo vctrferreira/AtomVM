@@ -127,6 +127,7 @@ static term nif_erlang_throw(Context *ctx, int argc, term argv[]);
 static term nif_erlang_pid_to_list(Context *ctx, int argc, term argv[]);
 static term nif_erlang_ref_to_list(Context *ctx, int argc, term argv[]);
 static term nif_erlang_fun_to_list(Context *ctx, int argc, term argv[]);
+static term nif_erlang_function_exported_3(Context *ctx, int argc, term argv[]);
 static term nif_atomvm_read_priv(Context *ctx, int argc, term argv[]);
 
 static const struct Nif binary_at_nif =
@@ -253,6 +254,12 @@ static const struct Nif float_to_list_nif =
 {
     .base.type = NIFFunctionType,
     .nif_ptr = nif_erlang_float_to_list
+};
+
+static const struct Nif function_exported_nif =
+{
+    .base.type = NIFFunctionType,
+    .nif_ptr = nif_erlang_function_exported_3
 };
 
 static const struct Nif is_process_alive_nif =
@@ -2373,6 +2380,11 @@ static term nif_erlang_make_fun_3(Context *ctx, int argc, term argv[])
     VALIDATE_VALUE(arity_term, term_is_integer);
 
     return term_make_function_reference(module_term, function_term, arity_term, ctx);
+}
+
+static term nif_erlang_function_exported_3(Context *ctx, int argc, term argv[])
+{
+    return TRUE_ATOM;
 }
 
 // AtomVM extension
