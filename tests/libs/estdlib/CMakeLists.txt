@@ -15,6 +15,7 @@ set(ERLANG_MODULES
     test_string
     test_proplists
     test_timer
+    test_supervisor
 )
 
 pack_archive(test_estdlib_lib ${ERLANG_MODULES})
